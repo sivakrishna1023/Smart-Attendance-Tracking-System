@@ -10,7 +10,7 @@ from numpy import expand_dims
 from numpy import asarray
 from numpy.linalg import norm
 
-from tensorflow import keras
+from tensorflow import keras 
 
 import collections
 
