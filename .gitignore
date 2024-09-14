@@ -1,0 +1,6 @@
+*.npy
+/Database/
+/class_room_images/
+/pre_process_images/
+attendance_file.csv
+/_pycache_/
