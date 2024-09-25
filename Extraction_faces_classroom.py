@@ -1,129 +1,181 @@
+import sys
+import tensorflow as tf
+from tensorflow import keras
 import os
 import cv2
 import numpy as np
-from PIL import Image, ImageTk
+from matplotlib import pyplot as plt
+from PIL import Image
+from numpy import asarray
+import mtcnn
 from mtcnn.mtcnn import MTCNN
-import customtkinter as ctk
-from tkinter import Label, Canvas, Scrollbar
 
-# Extract faces and return them along with the image with boxes drawn
-def extract_face_and_draw_boxes(img, required_size=(224, 224)):
+# Setting up environment variables for TensorFlow
+os.environ['TF_XLA_FLAGS'] = '--tf_xla_enable_xla_devices'
+
+# Handling encoding issues on Windows
+if os.name == 'nt':  # Apply only on Windows
+    import ctypes
+    ctypes.windll.kernel32.SetConsoleCP(65001)
+    ctypes.windll.kernel32.SetConsoleOutputCP(65001)
+sys.stdout.reconfigure(encoding='utf-8')
+sys.stderr.reconfigure(encoding='utf-8')
+
+# Getting the current working directory
+current_directory = os.getcwd()
+
+# Define the input and output folder paths dynamically
+input_folder = os.path.join(current_directory, 'class_room_images')
+output_folder = os.path.join(current_directory, 'pre_process_images')
+
+# Create output directory if it doesn't exist
+if not os.path.exists(output_folder):
+    os.mkdir(output_folder)
+
+# Function to extract faces from an image
+def extract_face(img, required_size=(224, 224)):
+    # Create the detector, using default weights
     detector = MTCNN()
+    # Detect faces in the image
     results = detector.detect_faces(img)
-    
     face_array = []
-    for i, face_data in enumerate(results):
-        x1, y1, width, height = face_data['box']
+    for i in range(len(results)):
+        x1, y1, width, height = results[i]['box']
         x2, y2 = x1 + width, y1 + height
-
-        # Make sure box coordinates are within image dimensions
-        x1, y1 = max(0, x1), max(0, y1)
-        x2, y2 = min(img.shape[1], x2), min(img.shape[0], y2)
-
-        # Draw green box around the face
-        cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
-
-        # Extract face from the image
         face = img[y1:y2, x1:x2]
-        face_image = Image.fromarray(face)
-        face_array.append(np.asarray(face_image))
+        # Resize pixels to the model size
+        image = Image.fromarray(face)
+        image = image.resize(required_size)
+        face_array.append(asarray(image))
+    return face_array
 
-    return face_array, img
-
-# Process images: Extract faces, store them, and return list for GUI display
-def process_and_store_images():
-    current_directory = os.getcwd()
-    input_folder = os.path.join(current_directory, 'class_room_images')
-    output_folder = os.path.join(current_directory, 'pre_process_images')
-
-    if not os.path.exists(input_folder):
-        raise FileNotFoundError(f"Directory {input_folder} not found.")
-
-    if not os.path.exists(output_folder):
-        os.mkdir(output_folder)
-
-    image_filenames = os.listdir(input_folder)
-    images_with_boxes = []
-    cnt = 0
-
-    for filename in image_filenames:
-        img_path = os.path.join(input_folder, filename)
-        img = cv2.imread(img_path)
-        if img is None:
-            print(f"Failed to read {filename}. Skipping.")
+# Processing each image in the input folder
+cnt = 0
+for filename in os.listdir(input_folder):
+    try:
+        # Safely print filenames
+        print(f"Processing file: {filename.encode('utf-8', errors='ignore').decode('utf-8')}")
+        img1 = cv2.imread(os.path.join(input_folder, filename))
+        
+        # Skip if the image could not be read
+        if img1 is None:
+            print(f"Failed to read image {filename}. Skipping.")
             continue
 
-        # Extract faces and draw bounding boxes
-        faces, img_with_boxes = extract_face_and_draw_boxes(img)
+        # Resize the image
+        img1 = cv2.resize(img1, (224, 224))
+        # Extract faces from the image
+        pixels = extract_face(img1)
+        print(f"Number of faces detected: {len(pixels)}")
 
-        # Save the extracted faces in 'pre_process_images' folder
-        for i, face in enumerate(faces):
-            save_path = os.path.join(output_folder, f'{filename[0:2]}_face_{cnt}.jpg')
-            cv2.imwrite(save_path, face)
+        # Save extracted faces to the output folder
+        for j in range(len(pixels)):
+            output_path = os.path.join(output_folder, filename[:2] + 'f_' + str(cnt) + '.jpg')
+            cv2.imwrite(output_path, pixels[j])
             cnt += 1
 
-        # Store image with bounding boxes for later display
-        images_with_boxes.append(img_with_boxes)
+        print(f"Finished processing {filename}")
 
-    return images_with_boxes
+    except UnicodeEncodeError as e:
+        print(f"UnicodeEncodeError processing file {repr(filename)}: {str(e)}")
+    except Exception as e:
+        print(f"Unexpected error processing file {repr(filename)}: {str(e)}")
 
-# Function to display images in the GUI with scrollable grid layout
-def display_images(images):
-    root = ctk.CTk()  # Create the main window
-    root.geometry("1200x800")
-    root.title("Face Detection Results")
+print("All images processed successfully.")
 
-    # Create a canvas with a scrollbar
-    canvas = Canvas(root, width=1100, height=750)
-    scrollbar = Scrollbar(root, orient="vertical", command=canvas.yview)
-    scrollable_frame = ctk.CTkFrame(canvas)
 
-    # Configure the canvas
-    scrollable_frame.bind(
-        "<Configure>",
-        lambda e: canvas.configure(
-            scrollregion=canvas.bbox("all")
-        )
-    )
 
-    canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-    canvas.configure(yscrollcommand=scrollbar.set)
+# import sys
+# import os
+# import cv2
+# import numpy as np
+# from PIL import Image
+# from numpy import asarray
+# from mtcnn.mtcnn import MTCNN
 
-    canvas.pack(side="left", fill="both", expand=True)
-    scrollbar.pack(side="right", fill="y")
+# # Set TensorFlow environment variables and suppress warnings
+# os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+# os.environ['TF_XLA_FLAGS'] = '--tf_xla_enable_xla_devices'
 
-    # Set fixed image size and number of columns
-    image_size = (600, 400)  # Fixed size for each image
-    num_columns = 3  # Number of images per row
-    row, col = 0, 0
+# def main():
+#     # Handling encoding issues on Windows
+#     if os.name == 'nt':  # Apply only on Windows
+#         import ctypes
+#         ctypes.windll.kernel32.SetConsoleCP(65001)
+#         ctypes.windll.kernel32.SetConsoleOutputCP(65001)
+        
+#     # Configure stdout and stderr encoding for consistent output
+#     sys.stdout.reconfigure(encoding='utf-8')
+#     sys.stderr.reconfigure(encoding='utf-8')
 
-    for img in images:
-        # Convert each image to ImageTk format and resize it to fixed size
-        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        img_pil = Image.fromarray(img_rgb)
-        img_pil = img_pil.resize(image_size)  # Resize image to fixed size
-        img_tk = ImageTk.PhotoImage(img_pil)
+#     # Getting the current working directory
+#     current_directory = os.getcwd()
 
-        # Create and display label with image
-        label = Label(scrollable_frame, image=img_tk)
-        label.image = img_tk  # Keep a reference to avoid garbage collection
-        label.grid(row=row, column=col, padx=10, pady=10)
+#     # Define the input and output folder paths dynamically
+#     input_folder = os.path.join(current_directory, 'class_room_images')
+#     output_folder = os.path.join(current_directory, 'pre_process_images')
 
-        # Update row and column for the next image
-        col += 1
-        if col >= num_columns:  # Move to the next row after 3 images
-            col = 0
-            row += 1
+#     # Create output directory if it doesn't exist
+#     if not os.path.exists(output_folder):
+#         os.mkdir(output_folder)
 
-    root.mainloop()
+#     # Function to extract faces from an image
+#     def extract_face(img, required_size=(224, 224)):
+#         try:
+#             # Create the detector, using default weights
+#             detector = MTCNN()
+#             # Detect faces in the image
+#             results = detector.detect_faces(img)
+#             face_array = []
+#             for i in range(len(results)):
+#                 x1, y1, width, height = results[i]['box']
+#                 x2, y2 = x1 + width, y1 + height
+#                 face = img[y1:y2, x1:x2]
+#                 # Resize pixels to the model size
+#                 image = Image.fromarray(face)
+#                 image = image.resize(required_size)
+#                 face_array.append(asarray(image))
+#             return face_array
+#         except Exception as e:
+#             print(f"Error in face extraction: {str(e)}")
+#             return []
 
-# Main logic
-if __name__ == "__main__":
-    # First, process the images and store them
-    processed_images = process_and_store_images()
+#     # Processing each image in the input folder
+#     cnt = 0
+#     for filename in os.listdir(input_folder):
+#         try:
+#             # Safely print filenames
+#             print(f"Processing file: {filename.encode('utf-8', errors='ignore').decode('utf-8')}")
+#             img1 = cv2.imread(os.path.join(input_folder, filename))
+            
+#             # Skip if the image could not be read
+#             if img1 is None:
+#                 print(f"Failed to read image {filename}. Skipping.")
+#                 continue
 
-    # If there are images, display them in the customtkinter GUI
-    if processed_images:
-        display_images(processed_images)
-    else:
-        print("No images to display.")
+#             # Resize the image
+#             img1 = cv2.resize(img1, (224, 224))
+#             # Extract faces from the image
+#             pixels = extract_face(img1)
+#             print(f"Number of faces detected: {len(pixels)}")
+
+#             # Save extracted faces to the output folder
+#             for j in range(len(pixels)):
+#                 # Encode the filename to handle any special characters
+#                 encoded_filename = filename.encode('utf-8', errors='ignore').decode('utf-8')
+#                 output_path = os.path.join(output_folder, encoded_filename[:2] + 'f_' + str(cnt) + '.jpg')
+#                 cv2.imwrite(output_path, pixels[j])
+#                 cnt += 1
+
+#             print(f"Finished processing {filename}")
+
+#         except UnicodeEncodeError as e:
+#             print(f"UnicodeEncodeError processing file {repr(filename)}: {str(e)}")
+#         except Exception as e:
+#             print(f"Unexpected error processing file {repr(filename)}: {str(e)}")
+
+#     print("All images processed successfully.")
+
+# # This ensures the main function runs only if this script is executed directly
+# if __name__ == "__main__":
+#     main()
