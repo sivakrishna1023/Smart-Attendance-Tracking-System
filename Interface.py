@@ -15,11 +15,12 @@ class InterfaceApp(customtkinter.CTk):
     
     def __init__(self):
         super().__init__()
-        self.gmail = None
+        self.gmail = "Chukkakrishna999@gmail.com"
         self.name = None
         self.current_thread = None
         self.is_loading = False
         self.stop_thread_flag = threading.Event()
+        self.terminate_request=False
         # Get screen dimensions and set the window size accordingly
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
@@ -159,14 +160,17 @@ class InterfaceApp(customtkinter.CTk):
 
         
     def terminate_loading(self):
-        if self.current_thread is not None and self.current_thread.is_alive():
-            self.stop_thread_flag.set()
-            print("thread stopped")
-        self.start_stop_button.configure(state="normal")
+        if self.is_loading is False:
+            return
+        self.terminate_request=True
+        self.terminate_button.configure(state="disabled")
+        self.terminate_button.configure(text="Terminating...")
         self.is_loading = False
 
     def run_programs(self):
         for index, program in enumerate(self.program_list):
+            if self.terminate_request:
+                break
             try:
                 self.after(0, self.update_status_label, index, "Running...")
 
@@ -179,6 +183,11 @@ class InterfaceApp(customtkinter.CTk):
                         subprocess.run(['python', program, '--showpop'], check=True)
                     else:
                         subprocess.run(['python', program], check=True)
+                elif index== 4:
+                    self.subject="Attendance"
+                    self.content="There your attendance"
+                    self.excel_file="attendance_file.csv"
+                    subprocess.run(['python',program,str(self.gmail),str(self.subject),str(self.content),str(self.excel_file)])
                 else:
                     subprocess.run(['python', program], check=True)
 
@@ -187,6 +196,10 @@ class InterfaceApp(customtkinter.CTk):
                 print(f"Error running {program}: {e}")
                 self.after(0, self.update_status_label, index, "Failed")
         self.start_stop_button.configure(state='normal')
+        self.terminate_button.configure(state="normal")
+        self.terminate_button.configure(text="Terminate")
+        self.terminate_request=False
+        
     def fill_collecting_images_bar(self):
         
         if self.selected_time is None:

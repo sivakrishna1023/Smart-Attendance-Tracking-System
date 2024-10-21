@@ -1,38 +1,3 @@
-# import smtplib
-# from email.message import EmailMessage
-
-# SENDER_EMAIL = "moruganti.phd2019.ece@nitrr.ac.in"
-# APP_PASSWORD = "Madhu140886!"
-
-# def send_mail_with_excel(recipient_email, subject, content, excel_file):
-#     msg = EmailMessage()
-#     msg['Subject'] = subject
-#     msg['From'] = SENDER_EMAIL
-#     msg['To'] = recipient_email
-#     msg.set_content(content)
-
-#     with open(excel_file, 'rb') as f:
-#         file_data = f.read()
-#     msg.add_attachment(file_data, maintype="application", subtype="csv", filename=excel_file)
-
-#     with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
-#         smtp.login(SENDER_EMAIL, APP_PASSWORD)
-#         smtp.send_message(msg)
-     
-
-		
-# recipient_email='aashujaiswal132@gmail.com'
-# Date_='19012024'
-# Professor_name_='TMEENPAL'
-# content='Hi, PFA'
-
-# excel_file='attendance_file.csv'
-
-
-# subject=Date_+Professor_name_+'Attendance'	
-# send_mail_with_excel(recipient_email, subject, content, excel_file)		
-
-
 import smtplib
 from email.message import EmailMessage
 import os
@@ -92,9 +57,14 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Initialize the EmailSender class with the provided arguments
-    sender_email = "moruganti.phd2019.ece@nitrr.ac.in"
-    app_password = "Madhu140886!"  # Replace this with a secure way of handling passwords
-
+    sender_email = "chukkakrishna999@gmail.com"
+    app_password = "xkyheglgfmvsdaxf"  # Replace this with a secure way of handling passwords
+    # print(args)
+    # args.recipient_email="sivakrishna@474gmail.com" 
+    # args.subject="Testing the mail services", 
+    # args.content="Reply if you have received the mail", 
+    # args.excel_file="attendance_file.csv"
+    print(args)
     email_sender = EmailSender(sender_email=sender_email, 
                                app_password=app_password, 
                                recipient_email=args.recipient_email, 

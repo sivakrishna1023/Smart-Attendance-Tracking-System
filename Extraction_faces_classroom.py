@@ -266,7 +266,6 @@ if __name__ == "__main__":
 
     # Process images and show the one with the most faces
     processor.process_images()
-    print(args.showpopup,"From the argument passing through the Extract Images folder")
-    # if(args.showpopup):
-    processor.show_image_with_faces()
+    if(args.showpopup):
+        processor.show_image_with_faces()
     
