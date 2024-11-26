@@ -167,6 +167,45 @@ class ClassroomImageProcessor:
             except Exception as e:
                 print(f"Unexpected error processing file {repr(filename)}: {str(e)}")
 
+    def process_extra_images(self, input_files=None):
+        """
+        Process images passed as a list of numpy arrays.
+        """
+        if input_files is None:
+            print("No images provided for processing.")
+            return
+
+        for idx, img1 in enumerate(input_files):
+            try:
+                # Use the index as a placeholder for the filename
+                filename = f'image_{idx + 1}'
+
+                print(f"Processing image {filename}...")
+
+                if img1 is None:
+                    print(f"Image {filename} is invalid. Skipping.")
+                    continue
+
+                # Extract faces from the image
+                faces, results = self.extract_face(img1)
+                print(f"Number of faces detected in {filename}: {len(faces)}")
+
+                if len(faces) > self.max_faces:
+                    self.max_faces = len(faces)
+                    self.image_with_max_faces = img1.copy()  # Keep the original image
+                    self.detected_faces = faces
+                    self.bounding_boxes = results
+
+                # Save extracted faces to the output folder
+                for j in range(len(faces)):
+                    output_path = os.path.join(self.output_folder, f'{filename}_face_{j}.jpg')
+                    cv2.imwrite(output_path, faces[j][0])
+
+            except Exception as e:
+                print(f"Unexpected error processing image {idx + 1}: {str(e)}")
+
+        
+    
     def show_image_with_faces(self):
         """Display the image with the most detected faces."""
         if self.image_with_max_faces is not None:
@@ -193,6 +232,7 @@ class ClassroomImageProcessor:
             def on_right_button_click():
                 right_button.configure(state="disabled")  # Disable the button after click
                 self.capture_images()  # Capture the images
+                self.process_extra_images(input_files=self.input_extra_images)
                 root.destroy()  # Close the window after capturing images
 
             right_button = ctk.CTkButton(top_frame, text="Add Image's", command=on_right_button_click)
@@ -212,27 +252,24 @@ class ClassroomImageProcessor:
 
     def capture_images(self):
         """
-        Capture images and save them to the specified directory.
+        Capture images from the webcam and store them in memory for processing.
         """
         cnt = 0
-        self.num_images=4
+        self.num_images = 6
+        self.sleep_time = 0  # Adjust sleep time as needed
+        self.input_extra_images = []  # List to store captured images as numpy arrays
+
+        # Initialize webcam
         self.webcam = cv2.VideoCapture(0)
-        self.save_dir="class_room_images"
-        self.sleep_time=0
-        self.num_images=16
-        cnt=10
-        if not os.path.exists(self.save_dir):
-            os.mkdir(self.save_dir)
-        
+
         while cnt < self.num_images:
             check, frame = self.webcam.read()
 
             if check:
-                # Save the image
-                filename = f'{cnt}_img.jpg'
-                cv2.imwrite(os.path.join(self.save_dir, filename), img=frame)
-                print(f"Image {cnt + 1} saved.")
-                
+                # Store the captured frame in the list
+                self.input_extra_images.append(frame)
+                print(f"Image {cnt + 1} captured and stored in memory.")
+
                 # Increment the counter
                 cnt += 1
 
@@ -241,9 +278,10 @@ class ClassroomImageProcessor:
             else:
                 print("Error capturing image from webcam.")
                 break  # Exit loop on failure
-        
+
         # Release resources
         self.cleanup()
+
 
     def cleanup(self):
         """

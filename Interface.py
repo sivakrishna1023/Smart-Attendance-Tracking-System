@@ -15,7 +15,7 @@ class InterfaceApp(customtkinter.CTk):
     
     def __init__(self):
         super().__init__()
-        self.gmail = "Chukkakrishna999@gmail.com"
+        self.gmail = None
         self.name = None
         self.current_thread = None
         self.is_loading = False
